@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homestead & Garden Planner</title>
+<style>
+  :root{
+    --moss:#4a6b3a; --sage:#8fa876; --cream:#f6f1e4; --bark:#5b4636; --clay:#c8744a;
+    --sky:#dfeaf0; --card:#fffdf7; --line:#e1d9c3;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Georgia,"Times New Roman",serif;background:var(--cream);color:var(--bark);line-height:1.5}
+  header{background:linear-gradient(135deg,var(--moss),#32502a);color:#fff;padding:28px 20px 22px;text-align:center}
+  header h1{margin:0 0 6px;font-size:1.9rem;letter-spacing:.5px}
+  header p{margin:0;opacity:.9;font-style:italic}
+  main{max-width:880px;margin:0 auto;padding:16px}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0 18px}
+  .fact{background:var(--sky);border-radius:10px;padding:8px 10px;font-size:.85rem;text-align:center}
+  .fact b{display:block;font-size:.95rem;color:var(--moss)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
+  .tabs,.chips{display:flex;flex-wrap:wrap;gap:6px}
+  button,select,input{font-family:inherit;font-size:.9rem}
+  .tab,.chip{border:1px solid var(--moss);background:#fff;color:var(--moss);padding:6px 12px;border-radius:999px;cursor:pointer}
+  .tab.active,.chip.active{background:var(--moss);color:#fff}
+  .chip{border-color:var(--sage);color:var(--bark)}
+  .chip.active{background:var(--sage);color:#fff}
+  .row-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+  input[type=text],input[type=date],select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  input[type=text]{flex:1;min-width:140px}
+  .progress{height:10px;background:#e8e2cf;border-radius:6px;overflow:hidden;margin-top:10px}
+  .progress div{height:100%;background:var(--moss);width:0;transition:width .3s}
+  .pt{font-size:.8rem;margin-top:4px;text-align:right}
+  h2.month{margin:22px 0 8px;font-size:1.2rem;color:var(--moss);border-bottom:2px solid var(--sage);padding-bottom:3px}
+  .task{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--sage);border-radius:10px;padding:9px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start}
+  .task.g{border-left-color:#6a9a4a}.task.y{border-left-color:#3f8a8a}.task.h{border-left-color:var(--clay)}
+  .task.c{border-left-color:#7a7a9a}.task.p{border-left-color:#c58aa8}
+  .task input[type=checkbox]{width:20px;height:20px;margin-top:3px;accent-color:var(--moss);flex:none}
+  .body{flex:1;cursor:pointer}
+  .date{font-size:.8rem;color:#8a7a68}
+  .title{font-weight:bold}
+  .desc{display:none;font-size:.9rem;margin-top:5px;color:#6d5a49}
+  .task.open .desc{display:block}
+  .task.done .title{text-decoration:line-through;opacity:.55}
+  .task.overdue{background:#fdf0e8}
+  .tag{font-size:.7rem;background:#efe8d3;border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:normal}
+  .empty{text-align:center;padding:30px;color:#8a7a68;font-style:italic}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .btn{background:var(--clay);color:#fff;border:0;padding:7px 14px;border-radius:8px;cursor:pointer}
+  .btn.alt{background:var(--moss)}
+  .del{background:none;border:0;color:#b55;cursor:pointer;font-size:1rem}
+  footer{text-align:center;font-size:.8rem;color:#8a7a68;padding:20px}
+
+  /* Month grid */
+  #monthWrap{display:none}
+  #monthWrap h2{text-align:center;color:var(--moss);margin:6px 0 10px}
+  .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .dow{background:var(--moss);color:#fff;text-align:center;font-size:.8rem;padding:3px;border-radius:4px}
+  .cell{background:var(--card);border:1px solid var(--line);border-radius:5px;min-height:92px;padding:3px;overflow:hidden}
+  .cell.blank{background:transparent;border:0}
+  .cell .n{font-size:.75rem;font-weight:bold;color:var(--moss)}
+  .cell .wd{display:none;font-weight:normal;color:#8a7a68}
+  .mt{font-size:.62rem;line-height:1.2;margin-top:2px;padding:1px 3px;border-left:3px solid var(--sage);background:#f5f0df;border-radius:2px}
+  .mt.g{border-left-color:#6a9a4a}.mt.y{border-left-color:#3f8a8a}.mt.h{border-left-color:var(--clay)}
+  .mt.c{border-left-color:#7a7a9a}.mt.p{border-left-color:#c58aa8}
+  .mt.done{text-decoration:line-through;opacity:.5}
+  @media (max-width:700px){
+    .mgrid{grid-template-columns:1fr}
+    .dow,.cell.blank,.cell.noTasks{display:none}
+    .cell{min-height:0}
+    .cell .wd{display:inline}
+    .mt{font-size:.85rem}
+  }
+  @media print{
+    @page{size:landscape;margin:.4in}
+    body{background:#fff}
+    header,.facts,.panel,footer,#list{display:none !important}
+    main{max-width:none;padding:0}
+    #monthWrap{display:block !important}
+    .mgrid{grid-template-columns:repeat(7,1fr) !important}
+    .dow{display:block !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .cell.blank{display:block !important}
+    .cell.noTasks{display:block !important}
+    .cell{min-height:1.05in;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .cell .wd{display:none !important}
+    .mt{font-size:7.5pt}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌿 Homestead & Garden Planner</h1>
+  <p>Central Minnesota · Zone 4a · reminders for the whole year</p>
+</header>
+<main>
+  <div class="facts">
+    <div class="fact"><b>Soil workable</b>mid to late April</div>
+    <div class="fact"><b>Last frost</b>about May 10–20</div>
+    <div class="fact"><b>Tender plants out</b>Memorial Day</div>
+    <div class="fact"><b>First frost</b>late Sep to early Oct</div>
+    <div class="fact"><b>Snow season</b>late Nov to early April</div>
+  </div>
+
+  <div class="panel">
+    <div class="tabs" id="tabs"></div>
+    <div class="row-controls">
+      <label>Year <select id="year"></select></label>
+      <label id="monthLabel" style="display:none">Month <select id="monthSel"></select></label>
+      <button class="btn alt" id="printBtn" style="display:none">🖨️ Print this month</button>
+      <input type="text" id="search" placeholder="Search tasks...">
+      <label><input type="checkbox" id="showDone" checked> Show completed</label>
+    </div>
+    <div class="chips" id="chips" style="margin-top:10px"></div>
+    <div class="progress"><div id="bar"></div></div>
+    <div class="pt" id="pt"></div>
+  </div>
+
+  <div id="list"></div>
+  <div id="monthWrap"></div>
+
+  <div class="panel">
+    <b>➕ Add your own task</b>
+    <div class="row-controls">
+      <input type="text" id="cTitle" placeholder="Task name">
+      <input type="date" id="cDate">
+      <select id="cCat"></select>
+      <button class="btn alt" id="cAdd">Add</button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="exportIcs">📅 Download this year as .ics</button>
+      <button class="btn alt" id="resetDone">Clear all check marks</button>
+    </div>
+  </div>
+</main>
+<footer>Dates are averages for central Minnesota. Shift them when the weather says so. Tap a task to see details.</footer>
+
+<script>
+// ---------- DATA ----------
+// [id, category, title, rule, description]
+// Rules: Y,month,day = yearly | M,day,months = monthly (months like 5-6-7 or all)
+//        W,weekday,months = weekly (0=Sun) | N,month,nth,weekday = nth weekday | O,year,month,day = one time
+const TASKS = [
+  ["shutoffs","h","🔧 Find and label main water shutoff, breaker panel and gas shutoff","O,2026,11,28","One-time job. Put a labeled tag on each one and make sure everyone in the house knows where they are. If a pipe bursts, you will be glad you did this."],
+  ["radon","h","🏠 Test for radon (do this now, retest every 2 years)","O,2026,11,24","Minnesota has high radon levels. Use a short-term test kit (about $15-25) or order one from the Minnesota Department of Health. Place it in the lowest lived-in level with windows closed. Air filters do not remove radon. If the result is high, a radon mitigation system is the real fix. Retest every couple of years, or after any basement work."],
+  ["leaves-curb","y","🍂 Rake leaves to the curb (pickup is Thursday)","W,3,11","Get leaves to the street by Wednesday evening or early Thursday morning. Weekly in November."],
+  ["straw-winter","g","🍓 Mulch strawberry beds with straw for winter","Y,11,21","Do this after several hard frosts, when the ground is starting to freeze. Cover about 3-4 inches deep."],
+  ["car-kit","c","🚗 Stock winter kit in both cars","Y,11,22","Tire chains (practice putting them on in the driveway BEFORE you need them), gloves, small shovel, ice scraper, blanket, flashlight, jumper cables, kitty litter or sand, water and snacks, phone charger, hand warmers."],
+  ["tire-pressure","c","🚗 Check tire pressure (cold weather drops it)","M,1,11-12-1-2-3","Check when the tires are cold. Use the number on the driver's door sticker, not the number on the tire."],
+  ["flea","p","🐾 Monthly flea treatment (cats and dogs)","M,5,all","Last treated Nov 5, 2026. If your product lasts longer than a month, adjust this. Ask your vet if you are unsure about the schedule."],
+  ["dehumidify","h","🏠 Rinse or vacuum the dehumidifier filter","M,10,all","It runs nonstop and your pets shed, so the filter clogs. Slide it out, rinse or vacuum it, let it dry, and put it back."],
+  ["floor-drains","h","🔧 Check floor drain traps (washer siphons them)","M,13,all","Pour in a couple of quarts of water and a spoonful of mineral oil. If you smell sewer gas, the trap has emptied. Ask your brother about a trap primer, trap seal insert, or a venting fix for the washer drain. Also have him check where the dehumidifier drain line ends."],
+  ["vent-vacuum","p","🐾 Vacuum HVAC vents and return grilles (pet hair)","M,16,1-4-7-10","Pet hair collects in the registers and return grilles and makes the system work harder. Vacuum with a brush attachment. Make sure no furniture blocks them."],
+  ["sump-test","h","🔧 Test the sump pump and check the discharge line","M,6,3-6-9-12","Pour a bucket of water into the pit. The float should rise, the pump should kick on, and the water should drain quickly. Check that the outdoor discharge line is clear, flows away from the house, and is not frozen or blocked (important in Dec and Mar). Clear any debris from the pit. If you have a battery backup, test it and check its age. Keep the clear lid sealed afterward."],
+  ["insurance","h","🏠 Review insurance coverage and update home photo inventory","Y,12,4","Walk through with your phone and photograph belongings and receipts for big items. Check that coverage still fits."],
+  ["garden-review","g","🌱 Garden review and notes","Y,12,18","Write down what grew well, what did not, yields, pests, and which bed held which crop."],
+  ["fire-ext","h","🏠 Check fire extinguishers and first aid kit","Y,1,2","Check gauge pressure and expiration dates. Restock the first aid kit."],
+  ["seed-order","g","🌱 Plan garden layout and order seeds","Y,1,9","Sketch the garden map and rotate crops (no potatoes or tomatoes where they grew last year). Order seeds and seed potatoes early. Check canning jar and lid inventory."],
+  ["hvac-check-winter","p","🐾 Peek at the HVAC filter (pet hair check)","Y,1,9","The filter is rated for 6 months, but pet hair can clog it sooner. If it looks gray and furry, swap it and note the date."],
+  ["ice-dams","h","🏠 Check roof edges for ice dams and clear heavy snow","Y,1,16","Look for icicles and ice buildup at the eaves. Check the attic for frost or damp insulation."],
+  ["fridge-filter-1","h","🏠 Replace fridge water filter (if yours has one)","Y,1,16","Usually every 6 months."],
+  ["fridge-coils","p","🐾 Clean fridge coils (pet hair)","M,23,1-4-7-10","Unplug the fridge, then vacuum the coils with a coil brush and crevice tool. They are behind the bottom grille or on the back, depending on the model. Every 3 months."],
+  ["leak-check","h","🏠 Check under sinks and washer hoses for leaks","Y,2,6","Look for drips, stains, bulging or cracked hoses. Rubber washer hoses should be replaced about every 5 years (braided steel lasts longer)."],
+  ["onion-seed","g","🌱 Start red and yellow onion seeds indoors","Y,2,13","Needs bright light and an occasional trim. Skip it if you would rather buy onion sets or plants in April."],
+  ["fan-vent","h","🏠 Clean bathroom fans and range hood filter","Y,2,13","Fans vacuum clean. Hood filter soaks in hot soapy water."],
+  ["prune-elms","y","🌳 Prune trees while dormant (elms: only Oct through Mar)","Y,2,20","Fresh cuts on elms from April through September attract the beetles that spread Dutch elm disease. Remove dead or rubbing limbs. Hire a pro near power lines or for large limbs. Confirm the tree type with your city forester."],
+  ["celery-seed","g","🌱 Start celery seeds indoors","Y,2,27","Needs 10-12 weeks indoors. Soak seeds overnight, keep moist, and do not bury them (they need light to germinate)."],
+  ["dw-1","h","🏠 Run cleaning cycles: dishwasher and washing machine","Y,2,27","Clean the dishwasher filter and the washer door gasket, then run a cleaner or vinegar cycle."],
+  ["mower-service","y","🏠 Service mower and garden tools","Y,3,6","Sharpen the blade, change oil, replace spark plug and air filter, use fresh fuel. Clean and oil tools."],
+  ["pepper-seed","g","🌱 Start bell pepper seeds indoors","Y,3,13","Peppers need warm soil (about 80F) to sprout. A heat mat helps."],
+  ["dst-spring","h","🏠 Clocks spring forward: test smoke and CO detectors","N,3,2,0","Replace batteries and replace any detector older than 10 years."],
+  ["dryer-vent","h","🏠 Clean dryer vent and duct","Y,3,20","Lint is a major fire hazard, and pet hair adds to it. Disconnect the duct and clean from both ends. Check the outside flap."],
+  ["gfci-1","h","🏠 Test GFCI outlets and garage door auto-reverse","Y,3,27","Press TEST and RESET on each GFCI outlet (kitchen, bathrooms, garage, outdoors). For the garage door, place a board on the floor to confirm it reverses."],
+  ["hvac-spring","h","🏠 Change HVAC filter (6-month)","Y,4,3","Write the date on the new filter."],
+  ["tomato-seed","g","🌱 Start tomato seeds indoors","Y,4,3","About 6-8 weeks before transplanting around Memorial Day."],
+  ["drainage","h","🏠 Check drainage and foundation after snowmelt","Y,4,3","Water should flow away from the house. Look for new foundation cracks, wet spots, and downspouts that are blocked or pointing the wrong way."],
+  ["car-spring","c","🚗 Spring car care","Y,4,3","Wash off road salt (including underneath), replace worn wipers, check tires and alignment after pothole season."],
+  ["straw-uncover","g","🍓 Pull back strawberry bed mulch gradually","Y,4,10","Rake the straw off the crowns but keep it nearby to cover on frosty nights once blossoms appear."],
+  ["gutters-spring","h","🏠 Clean gutters and downspouts (spring)","Y,4,10","Flush with a hose, check that water drains away from the foundation, and look for winter damage or sagging."],
+  ["asparagus-cleanup","g","🌱 Clear old foliage from the asparagus bed","Y,4,10","Remove last year's dead ferns once the snow is gone. Do not till the bed."],
+  ["pond-spring","y","🐸 Pond spring cleanup","Y,4,17","Once the ice is out, remove debris and dead leaves. Check the pump and filter and restart when the water is above 50F. Check the liner edges and water level."],
+  ["peas-sow","g","🌱 Sow sweet peas and edible peas outdoors","Y,4,17","Peas like cool soil and handle light frost. Sow as soon as the soil is workable and not soggy. Put up a trellis."],
+  ["chives","g","🌱 Plant or divide chives","Y,4,17","Hardy perennial. Plant a clump or sow seed outdoors."],
+  ["basement-inspect","h","🏠 Inspect basement walls, floor and unfinished area","Y,4,17","Look for damp spots, white mineral deposits, new cracks, musty smells, mold, and signs of pests. Check around the sump, the water heater, and the base of the finished walls."],
+  ["compost-till","g","🌱 Till finished compost into garden soil","Y,4,24","Wait until the soil crumbles in your hand instead of forming a mud ball. Do not till wet soil. Leave the asparagus bed alone and top-dress it with compost instead."],
+  ["romaine-1","g","🌱 Sow romaine lettuce (round 1) and plant onions","Y,4,24","Plant onion sets or transplants 1 inch deep and 4 inches apart. Sow romaine seed shallowly."],
+  ["roof-spring","h","🏠 Look over roof, siding and chimney from the ground","Y,4,24","Binoculars help. Look for missing or curled shingles, loose flashing, and damaged siding. Call a pro rather than climbing up."],
+  ["fans-summer","h","🏠 Set ceiling fans for summer (counterclockwise)","Y,4,24","Counterclockwise pushes air down for a cooling breeze."],
+  ["potato-plant","g","🌱 Plant potatoes","Y,5,1","Cut seed potatoes into pieces with 2 eyes each a day or two before planting so they can heal. Plant 4 inches deep and hill as they grow."],
+  ["carrot-1","g","🌱 Sow carrots (round 1)","Y,5,1","Keep the seed bed moist until they sprout (2-3 weeks)."],
+  ["ac-service","h","🏠 Book A/C service or clean the outdoor condenser","Y,5,1","Clear leaves and debris around the unit and rinse the fins gently."],
+  ["screens","h","🏠 Swap in window screens and check them for holes","Y,5,1","Patch small holes with screen repair patches."],
+  ["asparagus-harvest","g","🌱 Asparagus harvest season begins","Y,5,8","Harvest spears 6-8 inches tall by snapping or cutting at ground level. Check every other day. Weed and top-dress with compost."],
+  ["condensate","h","🏠 Clear and flush the HVAC condensate drain line","Y,5,8","The A/C drains water through a small line that can clog with algae and slime, causing leaks. Check your manual for the approved way to flush it. Make sure the line drains freely and the pan is dry."],
+  ["mow-weekly","y","🏠 Mow the lawn (weekly)","W,6,5-6-7-8-9-10","Mow high (about 3 inches) to shade out weeds. Skip a week if it is very dry. Repeats weekly May through October."],
+  ["corn-sow","g","🌱 Sow sweet corn","Y,5,15","Plant when soil is above 60F. Sow in blocks of short rows for pollination."],
+  ["harden-off","g","🌱 Start hardening off tomato, pepper and celery seedlings","Y,5,15","Put them outside in the shade for a few hours each day and increase over a week. Bring them in on cold nights."],
+  ["romaine-2","g","🌱 Sow romaine lettuce (round 2)","Y,5,15","Succession planting for a steady harvest."],
+  ["beans-sow","g","🌱 Sow green beans","Y,5,22","Wait until the soil is warm and frost danger is nearly past."],
+  ["pond-mosquito","y","🦟 Pond mosquito larva treatment","M,22,5-6-7-8-9","Monthly May through September. Also top off water, clean the skimmer or filter, remove debris, and check for algae. Follow the product label. Check the label for pet safety if pets drink from the pond."],
+  ["straw-spring","g","🍓 Weed and mulch strawberries, pinch blossoms on new plants","Y,5,22","Everbearing strawberries do best if new plants have blossoms pinched off until about the end of June. Established plants can be left alone."],
+  ["transplant","g","🌱 Transplant tomatoes, peppers, celery; plant cucumbers and watermelon","Y,5,29","Memorial Day weekend is the usual safe window. Check the forecast and cover plants if frost is possible. Give cucumbers a trellis and watermelon plenty of room."],
+  ["flowerbed-mulch","g","🌼 Weed and mulch flower beds","Y,6,5","Weed first, then lay 2-3 inches of mulch. Keep mulch off plant stems."],
+  ["carrot-2","g","🌱 Sow carrots (round 2)","Y,6,5","A later sowing for fall harvest and storage."],
+  ["waterheater","h","🏠 Flush water heater (ask your brother to help)","Y,6,12","Schedule a day with your brother. Drain a few gallons to clear sediment, check the temperature and pressure relief valve, and look for leaks or rust around the tank. Note the tank's age (most last 8-12 years). Ask him whether the anode rod should be checked."],
+  ["strawberry-pick","g","🍓 Strawberry picking begins","Y,6,12","Pick every other day when fully red. Net the bed if birds are a problem. Everbearing plants give a first flush now and another in late summer."],
+  ["tomato-mulch","g","🌱 Mulch the garden and stake or cage tomatoes","Y,6,19","Straw or shredded leaves hold moisture and suppress weeds. Hill the potatoes again if needed."],
+  ["compost-turn","g","🌱 Turn the compost pile","M,19,6-7-8-9","Keep it damp like a wrung-out sponge."],
+  ["asparagus-stop","g","🌱 Stop harvesting asparagus, let the ferns grow","Y,6,26","The ferns feed the roots for next year. Keep weeded."],
+  ["weed-summer","g","🌼 Weed flower beds and garden","M,26,6-7-8","Weed before things go to seed. Top off mulch."],
+  ["beans-2","g","🌱 Sow second round of green beans","Y,7,3","For a late summer and early fall harvest."],
+  ["hvac-check-summer","p","🐾 Peek at the HVAC filter (pet hair check)","Y,7,3","Cat and dog hair can clog the filter before 6 months, especially with the A/C running. Swap it if it is gray and furry."],
+  ["straw-runners","g","🍓 Thin strawberry runners and feed the bed","Y,7,10","After the first flush, remove excess runners and old leaves. Weed and feed lightly for the late summer crop."],
+  ["elm-watch","y","🌳 Elm check: look for wilting or yellowing branches","Y,7,17","Dutch elm disease shows as leaves that wilt and yellow on one branch while the rest of the tree looks fine. If you see this, contact your city forester or an arborist. Do not prune live elm limbs now."],
+  ["fridge-filter-2","h","🏠 Replace fridge water filter (if yours has one)","Y,7,17","Usually every 6 months."],
+  ["garlic-harvest","g","🧄 Check garlic for harvest","Y,7,24","Harvest when the bottom 3-4 leaves are brown and the upper leaves are still green. Cure 2-3 weeks in a dry, shaded, airy spot. Save the best heads for replanting."],
+  ["pickling","g","🥒 Pickling cucumbers and canning season begins","Y,7,31","Check jars, lids, canner, and vinegar. Process pickles within 24 hours of picking. Follow tested recipes (NCHFP or University Extension)."],
+  ["onion-harvest","g","🧅 Onion harvest check","Y,8,7","Harvest when about half the tops have fallen over. Cure for 2 weeks, then store cool and dry."],
+  ["romaine-fall","g","🌱 Sow fall romaine lettuce","Y,8,7","Cooler weather is coming. Shade seedlings if it is hot."],
+  ["driveway","h","🏠 Seal driveway cracks and check deck, fence and steps","Y,8,14","Look for loose boards, rot, wobbly railings, and cracked concrete."],
+  ["corn-harvest","g","🌽 Check sweet corn and tomatoes for harvest and canning","Y,8,14","Corn is ready when silks brown and kernels squirt milky juice. Plan canning and freezing sessions."],
+  ["straw-fall-pick","g","🍓 Second strawberry flush: pick every few days","Y,8,21","Everbearing plants produce again from late summer until frost."],
+  ["dw-2","h","🏠 Run cleaning cycles: dishwasher and washing machine","Y,8,21","Clean the dishwasher filter and the washer door gasket, then run a cleaner or vinegar cycle."],
+  ["watermelon","g","🍉 Check watermelons for ripeness","Y,8,28","Look for a yellow belly patch and a dried curly tendril near the stem. Listen for a hollow thump."],
+  ["lawn-fall","y","🌳 Fall lawn feeding and overseeding","Y,9,4","Early September is the best time for cool-season grass. Minnesota restricts phosphorus lawn fertilizer unless a soil test shows a need."],
+  ["potato-harvest","g","🥔 Harvest potatoes","Y,9,11","Dig after the vines die back. Cure 1-2 weeks in a dark, cool place before storing."],
+  ["weatherstrip","h","🏠 Check weatherstripping and caulk on doors and windows","Y,9,11","Replace worn weatherstripping and recaulk gaps before the cold arrives. It saves on heating bills."],
+  ["furnace","h","🏠 Furnace tune-up and vent check","Y,9,18","Schedule the service before the first cold snap. Test the thermostat. Keep your service receipts for the warranty."],
+  ["gfci-2","h","🏠 Test GFCI outlets and garage door auto-reverse","Y,9,18","Press TEST and RESET on each GFCI outlet."],
+  ["frost-watch","g","🌱 Frost watch: pick tender crops","Y,9,25","Harvest tomatoes, peppers, beans, and cucumbers if frost is forecast. Green tomatoes ripen indoors."],
+  ["hvac-fall","h","🏠 Change HVAC filter (6-month)","Y,10,2","Write the date on the new filter."],
+  ["pests","h","🏠 Seal gaps where mice and pests get in","Y,10,2","Check around pipes, the foundation, the garage door seal, and vents. Steel wool and caulk work for small gaps."],
+  ["garlic-plant","g","🧄 Plant garlic","Y,10,9","Plant cloves pointed end up, 2 inches deep and 6 inches apart. Mulch with straw after the ground starts to freeze."],
+  ["roof-fall","h","🏠 Look over roof, siding and chimney from the ground","Y,10,9","Check again before snow. Binoculars help."],
+  ["garage-door","h","🏠 Lube garage door tracks and rollers","Y,10,9","Use garage door lubricant (not heavy grease)."],
+  ["hoses","h","🏠 Drain hoses and shut off outdoor spigots","Y,10,16","Disconnect and drain hoses and store them. Shut off the indoor valve for outdoor faucets if you have one."],
+  ["carrot-celery-harvest","g","🥕 Harvest carrots and celery before hard freeze","Y,10,16","Carrots taste sweeter after a light frost, but pull them before the ground freezes."],
+  ["car-fall","c","🚗 Car winter prep","Y,10,16","Test the battery, check tires and tread, top off winter washer fluid, check wipers and antifreeze, and keep fuel above half."],
+  ["leaves-compost","y","🍂 Rake some leaves for compost and garden mulch","Y,10,23","Save bags of leaves for the compost pile and for mulching the garlic and strawberry beds. The rest wait for city pickup."],
+  ["fans-winter","h","🏠 Set ceiling fans for winter (clockwise)","Y,10,23","Clockwise on low pushes warm air down from the ceiling."],
+  ["fall-cleanup","g","🌱 Final garden cleanup and asparagus fern cut-down","Y,10,30","Pull spent plants and cut asparagus ferns when yellow and brown. Add compost on top of beds. Do not compost diseased plants."],
+  ["pond-fall","y","🐸 Pond fall cleanup","Y,10,30","Net or skim leaves and remove dead plant material. Clean the pump and filter and store them indoors so they do not freeze and crack."],
+  ["gutters-fall","h","🏠 Clean gutters and downspouts (fall)","Y,11,6","Wait until most leaves are down. Check that water flows away from the foundation."],
+  ["dst-fall","h","🏠 Clocks fall back: test smoke and CO detectors","N,11,1,0","Replace batteries as needed."],
+  ["snow-prep","h","🏠 Snow prep","Y,11,13","Tune up the snowblower if you have one, check shovels, stock ice melt and sand, and check the emergency kit and flashlights."]
+];
+
+const CATS = {g:["🌱","Garden"], y:["🌳","Yard & Pond"], h:["🏠","Home"], c:["🚗","Vehicles"], p:["🐾","Pets"]};
+const SEASONS = {
+  winter:{label:"❄️ Winter",months:[11,0,1]}, // Dec, Jan, Feb (0-indexed)
+  spring:{label:"🌷 Spring",months:[2,3,4]},
+  summer:{label:"☀️ Summer",months:[5,6,7]},
+  fall:{label:"🍁 Fall",months:[8,9,10]}
+};
+const START = new Date(2026,10,17);
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// ---------- STATE ----------
+const load = (k,f)=>{try{return JSON.parse(localStorage.getItem(k))||f}catch(e){return f}};
+let done = load("hp-done",{});
+let custom = load("hp-custom",[]);
+const today = new Date(); today.setHours(0,0,0,0);
+let state = {view:"upcoming", year: Math.max(2026, today.getFullYear()), month: today.getMonth(), cats:new Set(Object.keys(CATS)), q:"", showDone:true};
+
+// ---------- HELPERS ----------
+const pad = n => String(n).padStart(2,"0");
+const iso = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const monthList = s => s==="all" ? [1,2,3,4,5,6,7,8,9,10,11,12] : s.split("-").map(Number);
+function nthWeekday(y,m,n,dow){
+  const d = new Date(y,m-1,1);
+  while(d.getDay()!==dow) d.setDate(d.getDate()+1);
+  d.setDate(d.getDate()+7*(n-1));
+  return d;
+}
+
+// ---------- GENERATE TASKS FOR A YEAR ----------
+function generate(y){
+  const out = [];
+  TASKS.forEach(([id,cat,title,rule,desc])=>{
+    const p = rule.split(","); const t = p[0]; let dates = [];
+    if(t==="Y") dates.push(new Date(y,+p[1]-1,+p[2]));
+    else if(t==="O"){ if(+p[1]===y) dates.push(new Date(y,+p[2]-1,+p[3])); }
+    else if(t==="N") dates.push(nthWeekday(y,+p[1],+p[2],+p[3]));
+    else if(t==="M") monthList(p[2]).forEach(m=>dates.push(new Date(y,m-1,+p[1])));
+    else if(t==="W") monthList(p[2]).forEach(m=>{
+      // every matching weekday in the month
+      let d = new Date(y,m-1,1);
+      while(d.getDay()!==+p[1]) d.setDate(d.getDate()+1);
+      while(d.getMonth()===m-1){ dates.push(new Date(d)); d.setDate(d.getDate()+7); }
+    });
+    dates.filter(d=>d>=START).forEach(d=>out.push({key:id+"|"+iso(d),id,cat,title,desc,date:d,weekly:t==="W"}));
+  });
+  custom.forEach(c=>{
+    const d = new Date(c.date+"T00:00:00");
+    if(d.getFullYear()===y) out.push({key:c.id+"|"+c.date,id:c.id,cat:c.cat,title:c.title,desc:"Your own task.",date:d,custom:true});
+  });
+  return out.sort((a,b)=>a.date-b.date);
+}
+
+// ---------- FILTERING ----------
+function visibleTasks(){
+  let list;
+  if(state.view==="upcoming"){
+    const y = today.getFullYear();
+    list = generate(y).concat(generate(y+1));
+    const from = new Date(today); from.setDate(from.getDate()-14);
+    const to = new Date(today); to.setDate(to.getDate()+45);
+    list = list.filter(t=> t.date<=to && (t.date>=today || (t.date>=from && !done[t.key])));
+  } else {
+    list = generate(state.year);
+    if(SEASONS[state.view]) list = list.filter(t=>SEASONS[state.view].months.includes(t.date.getMonth()));
+    if(state.view==="month") list = list.filter(t=>t.date.getMonth()===state.month);
+  }
+  const q = state.q.trim().toLowerCase();
+  return list.filter(t=>
+    state.cats.has(t.cat) &&
+    (state.showDone || !done[t.key]) &&
+    (!q || (t.title+" "+t.desc).toLowerCase().includes(q))
+  );
+}
+
+// ---------- RENDER ----------
+function shorten(s,n){ return s.length>n ? s.slice(0,n-1)+"…" : s; }
+
+function renderMonth(list){
+  const y = state.year, m = state.month;
+  const first = new Date(y,m,1).getDay();
+  const days = new Date(y,m+1,0).getDate();
+  const wd = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  let html = '<h2>'+MONTHS[m]+' '+y+'</h2><div class="mgrid">';
+  wd.forEach(w=>html+='<div class="dow">'+w+'</div>');
+  for(let i=0;i<first;i++) html += '<div class="cell blank"></div>';
+  for(let d=1; d<=days; d++){
+    const dt = new Date(y,m,d);
+    const items = list.filter(t=>t.date.getDate()===d);
+    html += '<div class="cell'+(items.length?'':' noTasks')+'"><div class="n">'+d+'<span class="wd"> '+wd[dt.getDay()]+'</span></div>';
+    items.forEach(t=>{
+      html += '<div class="mt '+t.cat+(done[t.key]?' done':'')+'">'+esc(shorten(t.title,46))+'</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById("monthWrap").innerHTML = html;
+}
+
+function render(){
+  const isMonth = state.view==="month";
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
+  document.getElementById("year").disabled = state.view==="upcoming";
+  document.getElementById("monthLabel").style.display = isMonth ? "" : "none";
+  document.getElementById("printBtn").style.display = isMonth ? "" : "none";
+  document.getElementById("monthWrap").style.display = isMonth ? "block" : "none";
+  document.getElementById("list").style.display = isMonth ? "none" : "block";
+  const list = visibleTasks();
+  if(isMonth){
+    renderMonth(list);
+  } else {
+    const box = document.getElementById("list");
+    if(!list.length){ box.innerHTML = '<div class="empty">Nothing to show here. Try another tab or filter.</div>'; }
+    else {
+      let html = "", last = "";
+      list.forEach(t=>{
+        const label = MONTHS[t.date.getMonth()]+" "+t.date.getFullYear();
+        if(label!==last){ html += '<h2 class="month">'+label+'</h2>'; last = label; }
+        const isDone = !!done[t.key];
+        const overdue = !isDone && t.date<today;
+        const ds = t.date.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+        html += '<div class="task '+t.cat+(isDone?" done":"")+(overdue?" overdue":"")+'">'
+          +'<input type="checkbox" data-key="'+esc(t.key)+'" '+(isDone?"checked":"")+' aria-label="Mark done">'
+          +'<div class="body"><div class="date">'+ds+(t.weekly?" · repeats weekly":"")+(overdue?" · overdue":"")+'</div>'
+          +'<div class="title">'+esc(t.title)+'<span class="tag">'+CATS[t.cat][1]+'</span></div>'
+          +'<div class="desc">'+esc(t.desc)+'</div></div>'
+          +(t.custom?'<button class="del" data-del="'+esc(t.id)+'" title="Delete">✕</button>':'')
+          +'</div>';
+      });
+      box.innerHTML = html;
+    }
+  }
+  const total = list.length, d = list.filter(t=>done[t.key]).length;
+  document.getElementById("bar").style.width = (total? d/total*100 : 0)+"%";
+  document.getElementById("pt").textContent = d+" of "+total+" done";
+}
+
+// ---------- SETUP UI ----------
+const tabs = document.getElementById("tabs");
+[["upcoming","📌 Next 45 days"],["winter",SEASONS.winter.label],["spring",SEASONS.spring.label],
+ ["summer",SEASONS.summer.label],["fall",SEASONS.fall.label],["all","📅 Whole year"],["month","🖨️ Month / print"]].forEach(([v,l])=>{
+  const b = document.createElement("button"); b.className="tab"; b.dataset.view=v; b.textContent=l;
+  b.onclick=()=>{state.view=v;render()}; tabs.appendChild(b);
+});
+const ySel = document.getElementById("year");
+for(let y=2026;y<=2032;y++){ const o=document.createElement("option"); o.value=y; o.textContent=y; ySel.appendChild(o); }
+ySel.value = state.year; ySel.onchange=()=>{state.year=+ySel.value;render()};
+
+const mSel = document.getElementById("monthSel");
+MONTHS.forEach((n,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=n; mSel.appendChild(o); });
+mSel.value = state.month; mSel.onchange=()=>{state.month=+mSel.value;render()};
+document.getElementById("printBtn").onclick=()=>window.print();
+
+const chips = document.getElementById("chips");
+const cSel = document.getElementById("cCat");
+Object.entries(CATS).forEach(([k,[e,n]])=>{
+  const b=document.createElement("button"); b.className="chip active"; b.textContent=e+" "+n;
+  b.onclick=()=>{ state.cats.has(k)?state.cats.delete(k):state.cats.add(k); b.classList.toggle("active"); render(); };
+  chips.appendChild(b);
+  const o=document.createElement("option"); o.value=k; o.textContent=e+" "+n; cSel.appendChild(o);
+});
+
+document.getElementById("search").oninput = e=>{state.q=e.target.value;render()};
+document.getElementById("showDone").onchange = e=>{state.showDone=e.target.checked;render()};
+
+document.getElementById("list").addEventListener("change",e=>{
+  const k = e.target.dataset.key; if(!k) return;
+  e.target.checked ? done[k]=true : delete done[k];
+  localStorage.setItem("hp-done",JSON.stringify(done)); render();
+});
+document.getElementById("list").addEventListener("click",e=>{
+  const del = e.target.dataset.del;
+  if(del){ custom = custom.filter(c=>c.id!==del); localStorage.setItem("hp-custom",JSON.stringify(custom)); render(); return; }
+  const body = e.target.closest(".body");
+  if(body) body.parentElement.classList.toggle("open");
+});
+
+document.getElementById("cAdd").onclick=()=>{
+  const title=document.getElementById("cTitle").value.trim();
+  const date=document.getElementById("cDate").value;
+  if(!title||!date){ alert("Please enter a task name and a date."); return; }
+  custom.push({id:"custom-"+Date.now(),title,date,cat:cSel.value});
+  localStorage.setItem("hp-custom",JSON.stringify(custom));
+  document.getElementById("cTitle").value="";
+  state.year = +date.slice(0,4); ySel.value = state.year; state.view="all"; render();
+};
+
+document.getElementById("resetDone").onclick=()=>{
+  if(confirm("Clear every check mark?")){ done={}; localStorage.setItem("hp-done","{}"); render(); }
+};
+
+// ---------- ICS EXPORT ----------
+document.getElementById("exportIcs").onclick=()=>{
+  const e = s=>String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  let out = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Homestead Planner//EN","CALSCALE:GREGORIAN","X-WR-CALNAME:Homestead and Garden Planner"];
+  generate(state.year).forEach(t=>{
+    const next = new Date(t.date); next.setDate(next.getDate()+1);
+    out.push("BEGIN:VEVENT","UID:"+t.key.replace("|","-")+"@homestead","DTSTAMP:"+stamp,
+      "DTSTART;VALUE=DATE:"+iso(t.date).replace(/-/g,""),
+      "DTEND;VALUE=DATE:"+iso(next).replace(/-/g,""),
+      "SUMMARY:"+e(t.title),"DESCRIPTION:"+e(t.desc),"END:VEVENT");
+  });
+  out.push("END:VCALENDAR");
+  const blob = new Blob([out.join("\r\n")],{type:"text/calendar"});
+  const a = document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="homestead-"+state.year+".ics"; a.click();
+};
+
+render();
+</script>
+</body>
+</html>
